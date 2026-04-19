@@ -9,6 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy import select, func, desc, extract, or_
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from slugify import slugify
 
@@ -197,7 +198,7 @@ async def get_feed(mode: str = Query("chronological", pattern="^(chronological|r
     following_q = select(user_follows.c.following_id).where(
         user_follows.c.follower_id == current_user.id).scalar_subquery()
 
-    q = select(Post).where(Post.is_public == True,
+    q = select(Post).options(selectinload(Post.author), selectinload(Post.activity)).where(Post.is_public == True,
                             or_(Post.author_id.in_(following_q),
                                 Post.author_id == current_user.id))
     q = q.order_by(desc(Post.created_at) if mode == "chronological"
@@ -221,7 +222,7 @@ async def explore_feed(skip: int = 0, limit: int = Query(20, le=50),
                         db: AsyncSession = Depends(get_db),
                         current_user: User = Depends(get_current_user)):
     result = await db.execute(
-        select(Post).where(Post.is_public == True)
+        select(Post).options(selectinload(Post.author), selectinload(Post.activity)).where(Post.is_public == True)
         .order_by(desc(Post.likes_count * 3 + Post.comments_count * 2), desc(Post.created_at))
         .offset(skip).limit(limit))
     liked = {str(r[0]) for r in (await db.execute(

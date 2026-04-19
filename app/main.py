@@ -13,7 +13,7 @@ from app.routers.social import router as social_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()   # create_all — no Alembic needed
+    await init_db()
     yield
 
 
@@ -24,8 +24,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.add_middleware(CORSMiddleware, allow_origins=settings.ALLOWED_ORIGINS,
-                   allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+# CORS abierto para desarrollo y demo.
+# allow_origins=["*"] + allow_credentials=True no funciona juntos en el estándar HTTP,
+# por eso usamos allow_origin_regex que acepta cualquier origen incluyendo null (file://).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r".*",   # acepta cualquier origen, incluyendo file:// → null
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 

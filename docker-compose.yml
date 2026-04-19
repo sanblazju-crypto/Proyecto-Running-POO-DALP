@@ -27,6 +27,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://user:password@db:5432/endurance_db
       SECRET_KEY: dev-secret-key-change-in-production
       DEBUG: "true"
+      PYTHONPATH: /app
     ports:
       - "8000:8000"
     volumes:

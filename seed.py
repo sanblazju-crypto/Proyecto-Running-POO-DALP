@@ -1,23 +1,14 @@
 """Seed: populates DB with sample data.
 
-Usage inside Docker:
+Usage:
     docker compose exec api python seed.py
-
-Usage locally (from project root):
-    python seed.py
 """
-import asyncio, sys, os
-
-# Ensure the project root is always in sys.path,
-# regardless of where the script is invoked from.
-ROOT = os.path.dirname(os.path.abspath(__file__))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
+import asyncio
 from datetime import datetime, timedelta, timezone
 from slugify import slugify
-from app.database import SessionLocal, init_db          # was: AsyncSessionLocal (wrong name)
-from app.models import User, Event, Activity, Post, PostType, Discipline, Difficulty, ActivityType
+from app.database import SessionLocal, init_db
+from app.models import (User, Event, Activity, Post, PostType,
+                        Discipline, Difficulty, ActivityType)
 from app.security import hash_password
 
 USERS = [
@@ -30,23 +21,32 @@ USERS = [
 ]
 
 EVENTS = [
-    {"name": "Maratón de Madrid",    "discipline": Discipline.RUNNING,   "difficulty": Difficulty.INTERMEDIATE,
-     "date": datetime.now(timezone.utc) + timedelta(days=45),  "city": "Madrid",
-     "latitude": 40.4168, "longitude": -3.7038, "distance_km": 42.195, "registration_fee": 45.0},
-    {"name": "Volta a Catalunya",    "discipline": Discipline.CYCLING,   "difficulty": Difficulty.ADVANCED,
-     "date": datetime.now(timezone.utc) + timedelta(days=90),  "city": "Barcelona",
-     "latitude": 41.3851, "longitude":  2.1734, "distance_km": 180.0,  "registration_fee": 80.0},
-    {"name": "Ultra Trail Picos",    "discipline": Discipline.TRAIL,     "difficulty": Difficulty.ELITE,
-     "date": datetime.now(timezone.utc) + timedelta(days=120), "city": "Cangas de Onís",
-     "latitude": 43.3503, "longitude": -5.1237, "distance_km": 80.0,   "registration_fee": 120.0},
-    {"name": "Triatlón de Valencia", "discipline": Discipline.TRIATHLON, "difficulty": Difficulty.INTERMEDIATE,
-     "date": datetime.now(timezone.utc) + timedelta(days=60),  "city": "Valencia",
-     "latitude": 39.4699, "longitude": -0.3763, "distance_km": 51.5,   "registration_fee": 95.0},
+    {"name": "Maratón de Madrid",    "discipline": Discipline.RUNNING,
+     "difficulty": Difficulty.INTERMEDIATE,
+     "date": datetime.now(timezone.utc) + timedelta(days=45),
+     "city": "Madrid",   "latitude": 40.4168, "longitude": -3.7038,
+     "distance_km": 42.195, "registration_fee": 45.0},
+    {"name": "Volta a Catalunya",    "discipline": Discipline.CYCLING,
+     "difficulty": Difficulty.ADVANCED,
+     "date": datetime.now(timezone.utc) + timedelta(days=90),
+     "city": "Barcelona","latitude": 41.3851, "longitude":  2.1734,
+     "distance_km": 180.0,  "registration_fee": 80.0},
+    {"name": "Ultra Trail Picos",    "discipline": Discipline.TRAIL,
+     "difficulty": Difficulty.ELITE,
+     "date": datetime.now(timezone.utc) + timedelta(days=120),
+     "city": "Cangas de Onís","latitude": 43.3503, "longitude": -5.1237,
+     "distance_km": 80.0,   "registration_fee": 120.0},
+    {"name": "Triatlón de Valencia", "discipline": Discipline.TRIATHLON,
+     "difficulty": Difficulty.INTERMEDIATE,
+     "date": datetime.now(timezone.utc) + timedelta(days=60),
+     "city": "Valencia", "latitude": 39.4699, "longitude": -0.3763,
+     "distance_km": 51.5,   "registration_fee": 95.0},
 ]
 
 async def seed():
     await init_db()
     async with SessionLocal() as db:
+        # Users
         users = []
         for u in USERS:
             user = User(
@@ -59,11 +59,16 @@ async def seed():
             users.append(user)
         await db.flush()
 
+        # Events
         for ev in EVENTS:
-            slug = slugify(ev["name"])
-            db.add(Event(slug=slug, created_by_id=users[0].id,
-                         country="Spain", currency="EUR", tags=[], **ev))
+            db.add(Event(
+                slug=slugify(ev["name"]),
+                created_by_id=users[0].id,
+                country="Spain", currency="EUR", tags=[],
+                **ev,
+            ))
 
+        # Activities + posts
         for i, user in enumerate(users):
             for j in range(3):
                 started = datetime.now(timezone.utc) - timedelta(days=(j + 1) * 5 + i)
@@ -90,11 +95,12 @@ async def seed():
                 ))
 
         await db.commit()
-        print("✅ Seed completado.")
-        for u in USERS:
-            premium = " (premium)" if u.get("is_premium") else ""
-            print(f"   {u['email']} / password123{premium}")
-        print("\n🚀 Documentación: http://localhost:8000/docs")
+
+    print("\n✅ Seed completado.\n")
+    for u in USERS:
+        tag = " (premium)" if u.get("is_premium") else ""
+        print(f"   {u['email']}  /  password123{tag}")
+    print("\n🚀 http://localhost:8000/docs\n")
 
 if __name__ == "__main__":
     asyncio.run(seed())
